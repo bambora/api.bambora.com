@@ -1,0 +1,285 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  title: Bambora Payments API
+  description: Bambora Payments API for Q1
+host: api.bambora.com
+basePath: /v1
+schemes:
+  - https
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /payments/:
+    post:
+      tags:
+        - Payment
+      description: Create a new payment through various payment types such as credit card.
+      produces:
+        - application/json
+      parameters:
+        - name: payment
+          in: body
+          description: Payment details
+          required: true
+          schema:
+            $ref: '#/definitions/Payment'
+      responses:
+        '200':
+          description: Successful payment response. The amount specified in the purchase has been approved. If this is a credit card purchase then the full amount has been captured.
+          schema:
+            $ref: '#/definitions/PaymentResponse'
+        default:
+          description: Unexpected error or card declined. A 402 status code is a declined card of failed transaction.
+          schema:
+            $ref: '#/definitions/Error'
+  /payments/{trans_id}/capture/:
+    post:
+      tags:
+        - Payment
+      description: Create a new payment through various payment types such as credit card.
+      produces:
+        - application/json
+      parameters:
+        - name: trans_id
+          in: path
+          type: string
+          required: true
+          description: The transaction ID of the pre-auth that will be captured.
+        - name: payment
+          in: body
+          description: Payment details that can optionally be supplied. They will overwrite any details in the pre-auth. To set a capture amount that is less than the pre-auth, set that value in the Amount field.
+          required: false
+          schema:
+            $ref: '#/definitions/Payment'
+      responses:
+        '200':
+          description: Successful payment response.
+          schema:
+            $ref: '#/definitions/PaymentResponse'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /tokens/:
+    post:
+      tags:
+        - Token
+      description: Create a new token from a credit card or with an encrypted credit card.
+      produces:
+        - application/json
+      parameters:
+        - name: payment
+          in: body
+          description: Payment details
+          required: true
+          schema:
+            $ref: '#/definitions/Payment'
+      responses:
+        '200':
+          description: Successfully tokenized a credit card.
+          schema:
+            $ref: '#/definitions/TokenizeResponse'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /balance/:
+    post:
+      tags:
+        - Account
+      description: Retrieve the balance of your Bambora account
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successfully retrieved your Bambora account balance.
+          schema:
+            $ref: '#/definitions/BalanceResponse'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /tokens/{token_id}/:
+    get:
+      tags:
+        - Token
+      description: Get the masked credit card details from a token
+      produces:
+        - application/json
+      parameters:
+        - name: token_id
+          in: path
+          description: Token ID
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The masked credit card details of the token.
+          schema:
+            $ref: '#/definitions/TokenDetails'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+
+definitions:
+  Error:
+    properties:
+      status:
+        type: integer
+        format: int32
+        enum:
+          - 400
+          - 401
+          - 402
+          - 404
+          - 415
+          - 500
+        description: |
+          The HTTP status code is also included in the message body of the response. 
+          400 indicates an invalid request, usually an incorrectly formatted request from the client.
+          401 is an authorization exception, wrong API key or no auth supplied.
+          402 is a declined transaction. The message content was correct, however.
+          404 occurs when a resource cannot be found.
+          415 incorrect media type supplied in the request.
+          500 internal server error. These are rare.
+      code:
+        type: integer
+        format: int32
+        description: The code specific to this error. Details of the error can be found in the info field of this message.
+      message:
+        type: string
+        description: The human-readable error message that a developer will see. It is up to the developers to decide if this message should be shown to the user, for example if it is a declined card transaction vs. a message formatting error.
+      info:
+        type: string
+        description: |
+          A URL link to the support documentation for this particular error. The URL will have the error code as part of it. For example: http://support.bambora.com/errors/1234
+    required:
+      - status
+      - code
+      - message
+  Payment:
+    required:
+      - paymentType
+      - currency
+      - amount
+    properties:
+      paymentType:
+        type: object
+        enum:
+          - $ref: '#/definitions/CreditCardPayment'
+          - $ref: '#/definitions/TokenPayment'
+          - $ref: '#/definitions/EncryptedCardPayment'
+      currency:
+        type: string
+        description: "Values of: EUR, USD, CAD, GBP, SEK ... 3 letter ISO code for currency."
+        enum:
+          - EUR
+          - USD
+          - CAD
+          - GBP
+          - SEK
+      amount:
+        type: number
+        format: float32
+        minimum: 0
+        description: The amount of the transaction in the specified currency.
+      comment:
+        type: string
+        maxLength: 256
+        description: 256 characters of available space for a comment that will be saved on the transaction
+  PaymentResponse:
+    required:
+      - transactionId
+      - approved
+    properties:
+      transactionId:
+        type: string
+        description: the alphanumeric unique ID of the transaction
+      approved:
+        type: boolean
+        description: True if the transaction was approved and successful.
+  TokenizeResponse:
+    required:
+      - token
+    properties:
+      token:
+        type: string
+        description: The tokenized value of the card.
+  CreditCard:
+    required:
+      - cardNumber
+      - expiryMonth
+      - expiryYear
+    properties:
+      cardNumber:
+        type: string
+      expiryMonth:
+        type: integer
+        format: int32
+        description: One to Two digit representation of the expiry month. Requests to retrieve credit card information will not return the expiry month value.
+      expiryYear:
+        type: integer
+        format: int32
+        description: Two-digit representation of the expiry year. Requests to retrieve credit card information will not return the expiry year value.
+      cvd:
+        type: string
+        description: CVD/CVV number on the back of the card. Either 3 or 4 digits in length. Requests to retrieve credit card information will not return the CVD value.
+  CreditCardPayment:
+    required:
+      - creditCard
+    properties:
+      creditCard:
+        $ref: '#/definitions/CreditCard'
+      preAuth:
+        type: boolean
+        default: false
+        description: If true the payment will be run as a pre-authorization.
+  TokenPayment:
+    required:
+      - token
+    properties:
+      token:
+        type: string
+      preAuth:
+        type: boolean
+  EncryptedCardPayment:
+    required:
+      - encrypted
+    properties:
+      encrypted:
+        type: string
+        description: The encrypted card data.
+      preAuth:
+        type: boolean
+        default: false
+        description: If true the payment will be run as a pre-authorization.
+  TokenDetails:
+    required:
+      - maskedCard
+    properties:
+      maskedCard:
+        type: string
+        description: "Returns the first 6 and last 4 digits. The first 6 are the BIN range. The card will resemble this string: 444455XXXXXX1234"
+  BalanceResponse:
+    required:
+      - amount
+      - currency
+    properties:
+      amount:
+        type: number
+        format: float32
+      currency:
+        type: string
+        description: "Values of: EUR, USD, CAD, GBP, SEK ... 3 letter ISO code for currency."
+        enum:
+          - EUR
+          - USD
+          - CAD
+          - GBP
+          - SEK
+    

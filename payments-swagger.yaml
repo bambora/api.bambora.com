@@ -13,29 +13,101 @@ consumes:
 produces:
   - application/json
 paths:
-  /payments/:
+  /payments/creditcard/:
     post:
       tags:
         - Payment
-      description: Create a new payment through various payment types such as credit card.
+      description: Create a new payment using a credit card.
       produces:
         - application/json
       parameters:
-        - name: payment
+        - name: paymentBody
           in: body
           description: Payment details
           required: true
           schema:
-            $ref: '#/definitions/Payment'
+            $ref: '#/definitions/CreditCardPayment'
       responses:
         '200':
           description: Successful payment response. The amount specified in the purchase has been approved. If this is a credit card purchase then the full amount has been captured.
           schema:
-            $ref: '#/definitions/PaymentResponse'
+            $ref: '#/definitions/Payment'
         default:
-          description: Unexpected error or card declined. A 402 status code is a declined card of failed transaction.
+          description: Unexpected error or card declined. A 402 status code is a declined card or failed transaction.
           schema:
             $ref: '#/definitions/Error'
+  
+  /payments/token/:
+    post:
+      tags:
+        - Payment
+      description: Create a new payment using a tokenized credit card.
+      produces:
+        - application/json
+      parameters:
+        - name: paymentBody
+          in: body
+          description: Payment details
+          required: true
+          schema:
+            $ref: '#/definitions/TokenPayment'
+      responses:
+        '200':
+          description: Successful payment response. The amount specified in the purchase has been approved.
+          schema:
+            $ref: '#/definitions/Payment'
+        default:
+          description: Unexpected error or card declined. A 402 status code is a declined card or failed transaction.
+          schema:
+            $ref: '#/definitions/Error'
+  
+  /payments/encryptedcard/:
+    post:
+      tags:
+        - Payment
+      description: Create a new payment using an encrypted credit card.
+      produces:
+        - application/json
+      parameters:
+        - name: paymentBody
+          in: body
+          description: Payment details
+          required: true
+          schema:
+            $ref: '#/definitions/EncryptedCardPayment'
+      responses:
+        '200':
+          description: Successful payment response. The amount specified in the purchase has been approved. If this is a credit card purchase then the full amount has been captured.
+          schema:
+            $ref: '#/definitions/Payment'
+        default:
+          description: Unexpected error or card declined. A 402 status code is a declined card or failed transaction.
+          schema:
+            $ref: '#/definitions/Error'
+  
+  /payments/{trans_id}/:
+    get:
+      tags:
+        - Payment
+      description: Get a Payment.
+      produces:
+        - application/json
+      parameters:
+        - name: trans_id
+          in: path
+          type: string
+          required: true
+          description: The transaction ID of the pre-auth that will be captured.
+      responses:
+        '200':
+          description: The Payment.
+          schema:
+            $ref: '#/definitions/Payment'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  
   /payments/{trans_id}/capture/:
     post:
       tags:
@@ -59,11 +131,155 @@ paths:
         '200':
           description: Successful payment response.
           schema:
-            $ref: '#/definitions/PaymentResponse'
+            $ref: '#/definitions/Payment'
         default:
           description: Unexpected error
           schema:
             $ref: '#/definitions/Error'
+  
+  /payments/{trans_id}/void/:
+    post:
+      tags:
+        - Payment
+      description: Void a Payment.
+      produces:
+        - application/json
+      parameters:
+        - name: trans_id
+          in: path
+          type: string
+          required: true
+          description: The transaction ID of the Payment that will be voided.
+        - name: payment
+          in: body
+          description: Payment details that can optionally be supplied. They will overwrite most of details in the original Payment that is being voided.
+          required: false
+          schema:
+            $ref: '#/definitions/Payment'
+      responses:
+        '200':
+          description: Updated Payment with the Void status set.
+          schema:
+            $ref: '#/definitions/Payment'
+        default:
+          description: Unexpected error or failed to void the Payment.
+          schema:
+            $ref: '#/definitions/Error'
+            
+  /payments/{trans_id}/returns/:
+    post:
+      tags:
+        - Payment
+      description: Return a payment for all or part of the original amount. The Return amount will be in the same currency as the original Payment.
+      produces:
+        - application/json
+      parameters:
+        - name: trans_id
+          in: path
+          type: string
+          required: true
+          description: The transaction ID of the Payment that will be returned.
+        - name: return
+          in: body
+          description: Details of the return. This is optional and if not supplied then the Payment will be returned for the entire original amount.
+          required: false
+          schema:
+            $ref: '#/definitions/Return'
+      responses:
+        '200':
+          description: The Return object with updated state.
+          schema:
+            $ref: '#/definitions/Payment'
+        default:
+          description: Unexpected error or failed to Return the Payment.
+          schema:
+            $ref: '#/definitions/Error'
+    get:
+      tags:
+        - Payment
+      description: Get a all returns on a payment
+      produces:
+        - application/json
+      parameters:
+        - name: trans_id
+          in: path
+          type: string
+          required: true
+          description: The transaction ID of the Payment that was returned.
+      responses:
+        '200':
+          description: List of the Return objects for this Payment.
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Return'
+        default:
+          description: Unexpected error.
+          schema:
+            $ref: '#/definitions/Error'
+            
+  /payments/{trans_id}/returns/{return_id}/:
+    get:
+      tags:
+        - Payment
+      description: Return a payment for all or part of the original amount. The Return amount will be in the same currency as the original Payment.
+      produces:
+        - application/json
+      parameters:
+        - name: trans_id
+          in: path
+          type: string
+          required: true
+          description: The ID of the Payment that will be returned.
+        - name: return_id
+          in: path
+          type: string
+          required: true
+          description: The ID of the Return for the Payment.
+      responses:
+        '200':
+          description: The Return object with updated state.
+          schema:
+            $ref: '#/definitions/Return'
+        default:
+          description: Unexpected error or failed to Return the Payment.
+          schema:
+            $ref: '#/definitions/Error'
+            
+  /payments/{trans_id}/returns/{return_id}/void/:
+    post:
+      tags:
+        - Payment
+      description: Return a payment for all or part of the original amount. The Return amount will be in the same currency as the original Payment.
+      produces:
+        - application/json
+      parameters:
+        - name: trans_id
+          in: path
+          type: string
+          required: true
+          description: The transaction ID of the Payment that was returned.
+        - name: return_id
+          in: path
+          type: string
+          required: true
+          description: The return ID of the Return that will be voided.
+        - name: return
+          in: body
+          description: Details of the return. This is optional and if not supplied then the Payment will be returned for the entire original amount.
+          required: false
+          schema:
+            $ref: '#/definitions/Return'
+      responses:
+        '200':
+          description: The Return object with updated state.
+          schema:
+            $ref: '#/definitions/Payment'
+        default:
+          description: Unexpected error or failed to Return the Payment.
+          schema:
+            $ref: '#/definitions/Error'
+    
   /tokens/:
     post:
       tags:
@@ -87,22 +303,7 @@ paths:
           description: Unexpected error
           schema:
             $ref: '#/definitions/Error'
-  /balance/:
-    post:
-      tags:
-        - Account
-      description: Retrieve the balance of your Bambora account
-      produces:
-        - application/json
-      responses:
-        '200':
-          description: Successfully retrieved your Bambora account balance.
-          schema:
-            $ref: '#/definitions/BalanceResponse'
-        default:
-          description: Unexpected error
-          schema:
-            $ref: '#/definitions/Error'
+            
   /tokens/{token_id}/:
     get:
       tags:
@@ -147,11 +348,10 @@ definitions:
           404 occurs when a resource cannot be found.
           415 incorrect media type supplied in the request.
           500 internal server error. These are rare.
-      code:
-        type: integer
-        format: int32
+      title:
+        type: string
         description: The code specific to this error. Details of the error can be found in the info field of this message.
-      message:
+      detail:
         type: string
         description: The human-readable error message that a developer will see. It is up to the developers to decide if this message should be shown to the user, for example if it is a declined card transaction vs. a message formatting error.
       info:
@@ -160,20 +360,12 @@ definitions:
           A URL link to the support documentation for this particular error. The URL will have the error code as part of it. For example: http://support.bambora.com/errors/1234
     required:
       - status
-      - code
-      - message
+      - title
   Payment:
     required:
-      - paymentType
       - currency
       - amount
     properties:
-      paymentType:
-        type: object
-        enum:
-          - $ref: '#/definitions/CreditCardPayment'
-          - $ref: '#/definitions/TokenPayment'
-          - $ref: '#/definitions/EncryptedCardPayment'
       currency:
         type: string
         description: "Values of: EUR, USD, CAD, GBP, SEK ... 3 letter ISO code for currency."
@@ -183,6 +375,8 @@ definitions:
           - CAD
           - GBP
           - SEK
+          - AUD
+          - NZD
       amount:
         type: number
         format: float32
@@ -191,18 +385,39 @@ definitions:
       comment:
         type: string
         maxLength: 256
-        description: 256 characters of available space for a comment that will be saved on the transaction
-  PaymentResponse:
-    required:
-      - transactionId
-      - approved
-    properties:
-      transactionId:
+        description: 256 characters of available space for a comment that will be saved on the transaction.
+      state:
         type: string
-        description: the alphanumeric unique ID of the transaction
-      approved:
-        type: boolean
-        description: True if the transaction was approved and successful.
+        description: Set by the system when sent for processing.
+        enum:
+          - Authorized
+          - Authorization Expired
+          - Declined
+          - Voided
+          - Settling
+          - Settled
+  Return:
+    required:
+      - amount
+    properties:
+      amount:
+        type: number
+        format: float32
+        minimum: 0
+        description: The amount of the transaction in the currency specified by the original Payment.
+      comment:
+        type: string
+        maxLength: 256
+        description: 256 characters of available space for a comment that will be saved on the return.
+      state:
+        type: string
+        description: Set by the system when sent for processing.
+        enum:
+          - Authorized
+          - Declined
+          - Voided
+          - Settling
+          - Settled
   TokenizeResponse:
     required:
       - token
@@ -230,6 +445,8 @@ definitions:
         type: string
         description: CVD/CVV number on the back of the card. Either 3 or 4 digits in length. Requests to retrieve credit card information will not return the CVD value.
   CreditCardPayment:
+    allOf:
+      - $ref: '#/definitions/Payment'
     required:
       - creditCard
     properties:
@@ -240,6 +457,8 @@ definitions:
         default: false
         description: If true the payment will be run as a pre-authorization.
   TokenPayment:
+    allOf:
+      - $ref: '#/definitions/Payment'
     required:
       - token
     properties:
@@ -248,6 +467,8 @@ definitions:
       preAuth:
         type: boolean
   EncryptedCardPayment:
+    allOf:
+      - $ref: '#/definitions/Payment'
     required:
       - encrypted
     properties:
@@ -265,21 +486,4 @@ definitions:
       maskedCard:
         type: string
         description: "Returns the first 6 and last 4 digits. The first 6 are the BIN range. The card will resemble this string: 444455XXXXXX1234"
-  BalanceResponse:
-    required:
-      - amount
-      - currency
-    properties:
-      amount:
-        type: number
-        format: float32
-      currency:
-        type: string
-        description: "Values of: EUR, USD, CAD, GBP, SEK ... 3 letter ISO code for currency."
-        enum:
-          - EUR
-          - USD
-          - CAD
-          - GBP
-          - SEK
     

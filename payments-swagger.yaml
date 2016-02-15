@@ -10,13 +10,11 @@ info:
     name: TBD
     url: 'http://tbd.bambora.com/licenses/LICENSE-1.0.html'
 
-host: localhost
-
 schemes:
   - https
   - http
 
-basePath: /payments/v1
+basePath: /payments
 
 consumes:
   - application/json
@@ -26,48 +24,75 @@ produces:
   - application/problem+json
 
 paths:
-  /transactions/{transaction_id}/:
+  /{payment}/:
     get:
       operationId: query_payment
       summary: Retrieve payment information
       description: >
-        Query the payment service for information on this transaction. Returns
-        payment details and transaction status.
+        Query the payment service for information on this
+        payment. Returns payment details and status.
       tags:
         - payments
       parameters:
-        - name: transaction_id
+        - name: API-Version
+          in: header
+          description: >
+            Header to indicate which version of the API this client is
+            using. Only changes when backwards-incompatible
+            modifications are introduced.
+          type: integer
+          required: true
+        - name: payment
           in: path
-          description: Merchant-specific identifier for the transaction.
+          description: Merchant-specific identifier for the payment.
           required: true
           type: string
+        - name: merchant
+          in: query
+          description: >
+            Merchant identifier. Only neccessary if the merchant
+            authentication token is for another merchant in the same
+            corporate hierarchy. The service will validate that the
+            merchant authentication token is authorized to perform the
+            operation.
+          type: string
+          required: false
       responses:
         '200':
           description: >
-            Transaction found by query.
+            Payment found by query.
           schema:
             $ref: '#/definitions/PaymentResponse'
         default:
           description: >
-            Query failed. A 404 status code is returned when the transaction
-            can't be found.
+            Query failed. A 404 status code is returned when the
+            payment can't be found.
           schema:
             $ref: '#/definitions/Error'
-  /transactions/{transaction_id}/credit_card_token/:
+  /{payment}/card_token/:
     post:
       operationId: authorize_token_payment
       summary: Post payment with card token
-      description: Create a new payment using a tokenized credit card.
+      description: >
+        Create a new payment authorization using a tokenized payment card.
       tags:
         - payments
       parameters:
-        - name: transaction_id
+        - name: API-Version
+          in: header
+          description: >
+            Header to indicate which version of the API this client is
+            using. Only changes when backwards-incompatible
+            modifications are introduced.
+          type: integer
+          required: true
+        - name: payment
           in: path
           description: >
-            Identifier for the transaction. Must be unique for this merchant.
+            Identifier for the payment. Must be unique for this merchant.
           required: true
           type: string
-        - name: payment
+        - name: details
           in: body
           description: Payment details
           required: true
@@ -76,34 +101,42 @@ paths:
       responses:
         '201':
           description: >
-            Successful payment response - transaction created. The amount
-            specified in the purchase has been approved.
+            Successful response - payment created. The amount
+            specified has been approved.
           schema:
             $ref: '#/definitions/PaymentResponse'
         default:
           description: >
             Unexpected error or card declined. A 402 status code is a declined
-            card of failed transaction.
+            card of failed payment.
           schema:
             $ref: '#/definitions/Error'
-  /transactions/{transaction_id}/capture/:
+  /{payment}/capture/:
     post:
       operationId: capture_payment
       tags:
         - payments
       description: >
-        Capture all or a part of the amount specified in the transaction
+        Capture all or a part of the amount specified in the payment.
       produces:
         - application/json
       parameters:
-        - name: transaction_id
+        - name: API-Version
+          in: header
+          description: >
+            Header to indicate which version of the API this client is
+            using. Only changes when backwards-incompatible
+            modifications are introduced.
+          type: integer
+          required: true
+        - name: payment
           in: path
-          description: The transaction id of the pre-auth that will be captured.
+          description: The payment id of the pre-auth that will be captured.
           required: true
           type: string
-        - name: parameters
+        - name: details
           in: body
-          description: Capture parameters
+          description: Capture details
           required: false
           schema:
             $ref: '#/definitions/Capture'
@@ -132,35 +165,44 @@ definitions:
           - 415
           - 500
         description: |
-          The HTTP status code is also included in the message body of the
-          response.
-          400 indicates an invalid request, usually an incorrectly formatted
-          request from the client.
-          401 is an authorization exception, wrong API key or no auth supplied.
-          402 is a declined transaction. The message content was correct,
+          The HTTP status code is also included in the message body of
+          the response.
+
+          400 indicates an invalid request, usually an incorrectly
+          formatted request from the client.
+
+          401 is an authentication exception, no auth supplied.
+
+          402 is a declined payment. The message content was correct,
           however.
+
+          403 is an authentication (e.g. wrong API key) or
+          authorization exception (e.g. operation not permitted)
+
           404 occurs when a resource cannot be found.
+
           415 incorrect media type supplied in the request.
+
           500 internal server error. These are rare.
       code:
         type: integer
         format: int32
         description: >
-          The code specific to this error. Details of the error can be found in
-          the info field of this message.
+          The code specific to this error. Details of the error can be
+          found in the info field of this message.
       message:
         type: string
         description: >
-          The human-readable error message that a developer will see. It is up
-          to the developers to decide if this message should be shown to the
-          user, for example if it is a declined card transaction vs. a message
-          formatting error.
+          The human-readable error message that a developer will
+          see. It is up to the developers to decide if this message
+          should be shown to the user, for example if it is a declined
+          card payment vs. a message formatting error.
       info:
         type: string
         description: >
-          A URL link to the support documentation for this particular error.
-          The URL will have the error code as part of it. For example:
-          http://support.bambora.com/errors/1234
+          A URL link to the support documentation for this particular
+          error.  The URL will have the error code as part of it. For
+          example: http://support.bambora.com/errors/1234
     required:
       - status
   TokenAuthorization:
@@ -173,7 +215,8 @@ definitions:
       currency:
         type: string
         description: >
-          Values of: EUR, USD, CAD, GBP, SEK et c. Uses ISO-4217 currency codes.
+          Values of: EUR, USD, CAD, GBP, SEK et c. Uses ISO-4217
+          currency codes.
         enum:
           - EUR
           - USD
@@ -187,16 +230,28 @@ definitions:
         format: int64
         minimum: 0
         description: >
-          The amount of the transaction in the specified currency's
-          cents (or equivalent).
+          The amount of the payment in the specified currency's cents
+          (or equivalent).
       token:
         type: string
       comment:
         type: string
         maxLength: 256
         description: >
-          256 characters of available space for a comment that will be saved
-          on the transaction.
+          256 characters of available space for a comment that will be
+          saved on the payment.
+      merchant:
+        type: string
+        description: >
+            Merchant identifier. Only neccessary if the merchant
+            authentication token is for another merchant in the same
+            corporate hierarchy. The service will validate that the
+            merchant authentication token is authorized to perform the
+            operation.
+    required:
+    - currency
+    - amount
+    - token
   Capture:
     type: object
     properties:
@@ -206,24 +261,43 @@ definitions:
         minimum: 0
         description: >
           Amount to capture, in cents (or equivalent). If this is less
-          than the amount of the transaction, a partial capture will
-          be performed. If this parameter is omitted, the entire
-          amount of the transaction will be captured.
+          than the amount of the payment, a partial capture will be
+          performed. If this parameter is omitted, the entire amount
+          of the payment will be captured.
       comment:
         type: string
         maxLength: 256
         description: >
-          256 characters of available space for a comment that will be saved
-          on the transaction.
+          256 characters of available space for a comment that will be
+          saved on the payment.
+    required:
+    - amount
+    example:
+      amount: 1000
+      comment: 10 EUR capture
   PaymentResponse:
     type: object
     required:
-      - transaction_id
+      - payment
       - state
     properties:
-      transaction_id:
+      region:
         type: string
-        description: Merchant-specific identifier for the transaction.
+        description: >
+          Geographical region of the merchant. Will be the same as the
+          sub-domain of the request.
+        enum:
+          - emea_0
+          - apac_0
+          - amer_0
+      merchant:
+        type: string
+        description: >
+          Identifier of the merchant. Retrieved during
+          onboarding. Will be the same as the host of the request.
+      payment:
+        type: string
+        description: Merchant-specific identifier for the payment.
       state:
         type: string
         description: Set by the system when sent for processing.
@@ -237,7 +311,8 @@ definitions:
       currency:
         type: string
         description: >
-          Values of: EUR, USD, CAD, GBP, SEK et c. Uses ISO-4217 currency codes.
+          Values of: EUR, USD, CAD, GBP, SEK et c. Uses ISO-4217
+          currency codes.
         enum:
           - EUR
           - USD
@@ -251,11 +326,15 @@ definitions:
         format: int64
         minimum: 0
         description: >
-          The amount of the transaction in the specified currency's
-          cents (or equivalent).
+          The amount of the payment in the specified currency's cents
+          (or equivalent).
       comment:
         type: string
         maxLength: 256
         description: >
-          256 characters of available space for a comment that will be saved
-          on the transaction.
+          256 characters of available space for a comment that will be
+          saved on the payment.
+      captures:
+        type: array
+        items:
+          $ref: '#/definitions/Capture'

@@ -248,10 +248,6 @@ definitions:
             corporate hierarchy. The service will validate that the
             merchant authentication token is authorized to perform the
             operation.
-    required:
-    - currency
-    - amount
-    - token
   Capture:
     type: object
     properties:

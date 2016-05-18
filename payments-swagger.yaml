@@ -248,6 +248,10 @@ definitions:
             corporate hierarchy. The service will validate that the
             merchant authentication token is authorized to perform the
             operation.
+      items:
+        type: array
+        items:
+          $ref: "#/definitions/Item"
   Capture:
     type: object
     properties:
@@ -334,3 +338,75 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Capture'
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/Item'
+  Item:
+    type: object
+    required: 
+      - id
+      - description
+      - quantity
+      - unit_price
+      - quantity_unit
+      - discount
+      - tax_rate
+      - total_tax_amount
+      - total_amount
+
+    properties:
+      id:
+        type: string
+        description: >
+          The merchants identifier of the item.
+      ean:
+        type: string
+        description: >
+          The EAN code of the item.
+      description:
+        type: string
+        description: >
+          A description of the item, eg. "Fresh organic apples"
+      quantity:
+        type: number
+        format: double
+        description: >
+          The quantity of item(s) purchacsed.
+      quantity_unit:
+        type: string
+        description: >
+          The unit for the quantity, `pcs`, `kg`, `oz`, `ns` etc.
+      unit_price:
+        type: number
+        format: int64
+        description: >
+          The price for 1 quantity of the item including taxes.
+      discount:
+        type: number
+        format: int64
+        description: >
+          A discount that will be substracted from the total_amount.
+      tax_rate:
+        type: number
+        format: double
+        description: >
+          The tax rate. Eg a tax rate  of 25% will be `0.25`.
+      total_tax_amount:
+        type: number
+        format: int64
+        description: >
+          The total tax amount for the items.
+      total_amount:
+        type: number
+        format: int64
+        description: >
+          The total price including taxes for the item object purchacsed, `(unit_price * quantity) - discount = total_amount`.
+      group:
+        type: string
+        description: >
+          An item group, eg. `fruit` for oranges.
+      brand:
+        type: string
+        description: >
+          The brand of the item, eg. `Apple` for an iphone.

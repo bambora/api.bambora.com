@@ -2,17 +2,18 @@ swagger: '2.0'
 info:
   version: 1.0.0
   title: Bambora Payments API
-  description: Bambora Payments API for Q1
+  description: |
+    The Bambora Payments API makes it possible to perform payment-related operations such as authorizing and capturing payments.
+    
+    In order to use this API you need to sign up with Bambora. Please send an email to sales.ecom@bambora.com if you want to sign up.
   contact:
-    name: support-to-be-defined@bambora.com
-  termsOfService: 'See http://tbd.bambora.com/terms_of_use'
-  license:
-    name: TBD
-    url: 'http://tbd.bambora.com/licenses/LICENSE-1.0.html'
+    name: sdk@bambora.com
+  termsOfService: ''
 
 schemes:
   - https
-  - http
+
+host: api-beta.bambora.com
 
 basePath: /payments
 

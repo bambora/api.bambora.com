@@ -1,0 +1,273 @@
+swagger: '2.0'
+
+info:
+  version: "1.0.0"
+  title: Bambora Batch Payments API
+  description: |
+    Provides interface for executing batch of payments with a single API call. When execution of the batch is completed, the client is notified with optional webhook call after which the client can retrieve batch status information. 
+    
+    Further operations for payments can be done with Bambora Payment API.
+    
+    Please see Bambora Payment API documentation for card data encryption details.
+  
+schemes: 
+  - https
+  
+host: api-beta.bambora.com
+
+consumes:
+  - application/json
+
+produces:
+  - application/json
+  - application/problem+json
+  
+paths:
+  /batchpayments/{batch}:
+    get:
+      description: Gets status of the specified payment batch
+      tags:
+        - batch payments
+      security: 
+        - auth:
+          - read_payment
+      parameters:
+        -
+          name: batch
+          in: path
+          type: string
+          required: true
+          description: Identifier for the payment batch
+      responses:
+        200:
+          description: Successful response
+          schema:
+            type: array
+            items: 
+              $ref: '#/definitions/PaymentResponse'
+        401:
+          description: Unauthorized - access token missing or expired
+        403:
+          description: Forbidden - lacking privileges for requested action
+        404:
+          description: Unknown payment batch
+        default:
+          description: Unexpected error
+    post:
+      description: Submits a new batch of payments for processing
+      tags:
+        - batch payments
+      security:
+        - auth:
+          - create_payment
+      parameters:
+        -
+          name: batch
+          in: path
+          type: string
+          required: true
+          description: Identifier for the payment batch
+        -
+          name: request
+          in: body
+          schema:
+            $ref: '#/definitions/BatchPaymentRequest'
+      responses:
+        201:
+          description: Payment batch successfully submitted for processing
+        401:
+          description: Unauthorized - access token missing or expired
+        403:
+          description: Forbidden - lacking privileges for requested action
+        default:
+          description: Unexpected error
+
+definitions:
+  BatchPaymentRequest:
+    type: object
+    required:
+      - payments
+      - encryptedSessionKeys
+    properties:
+      payments:
+        type: array
+        items:  
+          $ref: '#/definitions/PaymentRequest'
+      encryptedSessionKeys:
+        type: array
+        minItems: 1
+        description: >
+          An array containing details about an encrypted session key.
+        items:
+          type: object
+          description: >
+            Encrypted session key details
+          properties:
+            fingerprint:
+              type: string
+              description: Fingerprint of the certificate used for encrypting the session key. It is SHA-1 digest of DER encoded certificate. The digest is encoded to hex with uppercase characters.
+            sessionKey:
+              type: string
+              description: >
+                The base64 encoded encrypted session key.
+      callbackUrl:
+        type: string
+        title: URL to call after batch is processed
+
+  PaymentRequest:
+    type: object
+    required:
+      - merchant
+      - payment
+      - currency
+      - amount
+      - encryptedCard
+    properties:
+      merchant:
+        type: string
+        title: Identifier of the merchant
+        description: Retrieved during onboarding. Will be the same as the host of the request.
+      payment:
+        type: string
+        title: Merchant-specific identifier for the payment
+      currency:
+        type: string
+        title: Currency of the payment in ISO 4217 alpha
+        description: For example EUR
+      amount:
+        type: integer
+        format: int64
+        minimum: 0
+        title: The amount of the payment in the minor unit of the currency
+        description: For example 1000 for 10.00 EUR
+      capture:
+        type: boolean
+        title: Capture payment after successful authorization
+      encryptedCard:
+        type: object
+        required:
+          - cardNumber
+          - expiryMonth
+          - expiryYear
+        properties:
+          cardNumber:
+            type: string
+            title: Encrypted card number
+            description: >
+              A base64 encoded string containing a card number encrypted
+              with the session key.
+          cvcCode:
+            type: string
+            title: Encrypted CVx2
+            description: >
+              A base64 encoded string containing a cvc code encrypted
+              with the session key.
+          expiryMonth:
+            type: string
+            title: Encrypted month of expiry
+            description: >
+              A base64 encoded string containing the expiry month encrypted
+              with the session key.
+          expiryYear:
+            type: string
+            title: Encrypted year of expiry
+            description: >
+              A base64 encoded string containing the expiry year encrypted
+              with the session key.
+
+  Capture:
+    type: object
+    properties:
+      amount:
+        type: integer
+        format: int64
+        minimum: 0
+        description: >
+          Amount to capture, in cents (or equivalent). If this is less
+          than the amount of the payment, a partial capture will be
+          performed. If this parameter is omitted, the entire amount
+          of the payment will be captured.
+      comment:
+        type: string
+        maxLength: 256
+        description: >
+          256 characters of available space for a comment that will be
+          saved on the payment.
+    required:
+    - amount
+    example:
+      amount: 1000
+      comment: 10 EUR capture
+
+  PaymentResponse:
+    type: object
+    required:
+      - payment
+      - state
+    properties:
+      region:
+        type: string
+        description: >
+          Geographical region of the merchant. Will be the same as the
+          sub-domain of the request.
+        enum:
+          - emea_0
+          - apac_0
+          - amer_0
+      merchant:
+        type: string
+        description: >
+          Identifier of the merchant. Retrieved during
+          onboarding. Will be the same as the host of the request.
+      payment:
+        type: string
+        description: Merchant-specific identifier for the payment.
+      state:
+        type: string
+        description: Set by the system when sent for processing.
+        enum:
+          - None
+          - Authorized
+          - Authorization Expired
+          - Declined
+          - Voided
+          - Captured
+          - Refunded
+          - Settled
+          - Canceled
+      currency:
+        type: string
+        description: >
+          Values of: EUR, USD, DKK, CAD, GBP, SEK et c. Uses ISO-4217
+          currency codes.
+      amount:
+        type: integer
+        format: int64
+        minimum: 0
+        description: >
+          The amount of the payment in the specified currency's cents
+          (or equivalent).
+      comment:
+        type: string
+        maxLength: 256
+        description: >
+          256 characters of available space for a comment that will be
+          saved on the payment.
+      captures:
+        type: array
+        items:
+          $ref: '#/definitions/Capture'
+      scheme_action_code:
+        type: string
+        title: Authorization action code received from the card scheme
+        description: Usually 00 for approved authorization
+
+securityDefinitions:
+  auth:
+    type: oauth2
+    description: Access token from auth.bambora.com
+    flow: application
+    tokenUrl: https://auth.bambora.com/connect/token
+    scopes: 
+      read_payment: Grants reading payment information
+      create_payment: Grants making new payments

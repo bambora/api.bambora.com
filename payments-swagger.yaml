@@ -6,6 +6,38 @@ info:
     The Bambora Payments API makes it possible to perform payment-related operations such as authorizing and capturing payments.
     
     In order to use this API you need to sign up with Bambora. Please send an email to sales.ecom@bambora.com if you want to sign up.
+    
+    ### Card data encryption
+    Authorizing a payment with `/{payment}/encrypted_card_authorization/` requires card data to be encrypted before calling the API. 
+    
+    As part of the signup process you will receive RSA public key wrapped into X.509 certificate. When processing payments, you generate a random AES-128 session key which is encrypted using RSA public key with PKCS#1 padding and included in the request.
+    
+    The session key is used for encrypting card data with CBC block mode and PKCS#5 padding.
+    
+    ```
+    // parse certificate
+    CertificateFactory certFactory = CertificateFactory.getInstance("X.509");
+    Certificate cert = certFactory.generateCertificate(new ByteArrayInputStream(certData));
+    // calculate fingerprint
+    String fingerprint = Hex.encodeHexString(DigestUtils.sha(cert.getEncoded())).toUpperCase();
+    
+    // generate AES-128 session key
+    KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+    keyGenerator.init(128);
+    SecretKey sessionKey = keyGenerator.generateKey();
+    
+    // encrypt session key
+    Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+    cipher.init(Cipher.ENCRYPT_MODE, cert.getPublicKey());
+    String encSessionKey = Base64.getEncoder().encodeToString(cipher.doFinal(sessionKey.getEncoded()));
+    
+    // encrypt card number (other card data fields are encrypted in similar way)
+    cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+    IvParameterSpec iv = new IvParameterSpec(new byte[cipher.getBlockSize()]); // IV with 16 zero bytes
+    cipher.init(Cipher.ENCRYPT_MODE, sessionKey, iv);
+    String encCardNumber = Base64.getEncoder().encodeToString(cipher.doFinal(cardNumber.getBytes("UTF-8")));    
+    ```
+    
   contact:
     name: native.support@bambora.com
   termsOfService: ''
@@ -667,8 +699,7 @@ definitions:
             fingerprint:
               type: string
               description: >
-                The SHA-1 fingerprint of the certificate
-                used for encrypting the session key.
+                Fingerprint of the certificate used for encrypting the session key. It is SHA-1 digest of DER encoded certificate. The digest is encoded to hex with uppercase characters.
             sessionKey:
               type: string
               description: >
@@ -677,7 +708,6 @@ definitions:
         type: object
         required:
           - cardNumber
-          - cvcCode
           - expiryMonth
           - expiryYear
         properties:

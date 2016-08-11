@@ -3,7 +3,10 @@ swagger: '2.0'
 info:
   version: "1.0.0"
   title: Bambora Card Information API
-  description: This service provides information about different card types for identifying card scheme, card type and issuer country, for example. Same card number can have multiple records for example if international card number is also used for local debit scheme.
+  description: |
+    This service provides information about different card types for identifying card scheme, card type and issuer country, for example. 
+  
+    Same card number can have multiple records for example if international card number is also used for local debit scheme.
   
 schemes: 
   - https
@@ -34,7 +37,7 @@ paths:
           required: true
           description: "Merchant region: Europe"
         -
-          name: include_additional
+          name: includeAdditional
           in: query
           type: boolean
           description: Include additional entries such as local debit scheme information or secondary entries if same card number is used for both credit and debit applications
@@ -47,7 +50,7 @@ paths:
               $ref: '#/definitions/CardInformation'
         default:
           description: Unexpected error
-  /cardinformation/{region}/{pan_prefix}:
+  /cardinformation/{region}/{cardNumberPrefix}:
     get:
       description: Gets card information
       tags:
@@ -63,18 +66,18 @@ paths:
           required: true
           description: "Merchant region: Europe"
         -
-          name: pan_prefix
+          name: cardNumberPrefix
           in: path
           type: string
           required: true
           description: First ten digits of card number should be provided for realiable lookup
         -
-          name: pan_length
+          name: cardNumberLength
           in: query
           type: integer
           description: Length of the card number
         -
-          name: include_additional
+          name: includeAdditional
           in: query
           type: boolean
           description: Include additional entries such as local debit scheme information or secondary entries if same card number is used for both credit and debit applications 
@@ -94,19 +97,19 @@ definitions:
   CardInformation:
     type: object
     properties:
-      start_of_range:
+      rangeStart:
         title: Start of card number range right padded with 0 to 19 digits
         type: string
         description: For example 4920070000000000000
-      end_of_range: 
+      rangeEnd: 
         title: End of card number range right padded with 9 to 19 digits
         type: string
         description: For example 4920079999999999999
-      min_pan_length:
+      minCardNumberLength:
         title: Minimum length of the card number in this range
         type: integer
         description: For example 16
-      max_pan_length:
+      maxCardNumberLength:
         title: Maximum length of the card number in this range
         type: integer
         description: For example 16
@@ -114,19 +117,19 @@ definitions:
         title: "Card scheme: MasterCard, UnionPay or Visa"
         type: string
         description: For example Visa
-      issuer_country:
+      issuerCountry:
         title: Issuer country code in ISO 3166-1 alpha-3
         type: string
         description: For example FIN
-      billing_currency:
+      billingCurrency:
         title: Cardholder billing currency in ISO 4217 alpha
         type: string
         description: For example EUR
-      probable_billing_currency:
+      probableBillingCurrency:
         title: Probable billing currency deducted from issuer country if definite information is not available in ISO 4217 alpha
         type: string
         description: For example EUR
-      card_product_type:
+      cardProductType:
         title: "Card product type: CREDIT, DEBIT, PREPAID or UNKNOWN"
         type: string
         description: For example CREDIT

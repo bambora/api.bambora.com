@@ -126,8 +126,10 @@ paths:
     post:
       operationId: authorize_card_payment
       summary: Make payment using encrypted credit card
-      description: >
+      description: |
         Create a new authorized payment based on encrypted credit card details.
+        
+        Use amount 0 if you want to just check card validity.
       tags:
         - payments
       parameters:
@@ -223,8 +225,10 @@ paths:
     post:
       operationId: authorize_token_payment
       summary: Make payment using credit card token
-      description: >
+      description: |
           Create a new authorized payment based on a credit card token.
+          
+          Use amount 0 if you want to just check card validity.
       tags:
         - payments
       parameters:
@@ -856,7 +860,6 @@ definitions:
           - Authorized
           - Authorization Expired
           - Declined
-          - Voided
           - Captured
           - Refunded
           - Settled
@@ -888,6 +891,10 @@ definitions:
         description: >
           256 characters of available space for a comment that will be
           saved on the payment.
+      scheme_response_code:
+        type: string
+        title: Authorization response code (also known as action code) received from the card scheme
+        description: Usually 00 for approved authorization
       captures:
         type: array
         items:
@@ -923,10 +930,10 @@ definitions:
           - Authorized
           - Authorization Expired
           - Declined
-          - Voided
           - Captured
           - Refunded
           - Settled
+          - Canceled
       currency:
         type: string
         description: >
@@ -954,6 +961,10 @@ definitions:
         description: >
           256 characters of available space for a comment that will be
           saved on the payment.
+      scheme_response_code:
+        type: string
+        title: Authorization response code (also known as action code) received from the card scheme
+        description: Usually 00 for approved authorization
       captures:
         type: array
         items:

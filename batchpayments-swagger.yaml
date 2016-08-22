@@ -143,6 +143,16 @@ definitions:
       capture:
         type: boolean
         title: Capture payment after successful authorization
+      operation:
+        type: string
+        title: Operation to perform, defaults to PAYMENT
+        description: PAYMENT will initiate a new purchase transaction, CREDIT will initiate a refund for existing payment with provided payment identifier
+        enum:
+          - PAYMENT
+          - CREDIT
+      type:
+        type: string
+        title: Type of the payment, defaults to ECOM
       encryptedCard:
         type: object
         required:
@@ -257,9 +267,9 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Capture'
-      scheme_action_code:
+      scheme_response_code:
         type: string
-        title: Authorization action code received from the card scheme
+        title: Authorization response code (also known as action code) received from the card scheme
         description: Usually 00 for approved authorization
 
 securityDefinitions:

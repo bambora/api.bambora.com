@@ -48,6 +48,33 @@ paths:
             type: array
             items: 
               $ref: '#/definitions/CardInformation'
+        401:
+          description: Unauthorized - access token missing or expired
+        403:
+          description: Forbidden - lacking privileges for requested action              
+        default:
+          description: Unexpected error
+    head:
+      description: Gets last updated timestamp for the data set, returned in Last-Modified response header
+      tags:
+       - card information
+      security: 
+        - auth:
+          - read_cardinformation
+      parameters:
+        -
+          name: region
+          in: path
+          type: string
+          required: true
+          description: "Merchant region: Europe"
+      responses:
+        200:
+          description: Successful response
+        401:
+          description: Unauthorized - access token missing or expired
+        403:
+          description: Forbidden - lacking privileges for requested action
         default:
           description: Unexpected error
   /cardinformation/{region}/{cardNumberPrefix}:
@@ -88,6 +115,10 @@ paths:
             type: array
             items: 
               $ref: '#/definitions/CardInformation'
+        401:
+          description: Unauthorized - access token missing or expired
+        403:
+          description: Forbidden - lacking privileges for requested action
         404:
           description: Unknown card
         default:

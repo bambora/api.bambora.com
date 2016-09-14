@@ -33,7 +33,7 @@ info:
     
     // encrypt card number (other card data fields are encrypted in similar way)
     cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-    IvParameterSpec iv = new IvParameterSpec(new byte[cipher.getBlockSize()]); // IV with 16 zero bytes
+    IvParameterSpec iv = new IvParameterSpec(sessionKey.getEncoded());
     cipher.init(Cipher.ENCRYPT_MODE, sessionKey, iv);
     String encCardNumber = Base64.getEncoder().encodeToString(cipher.doFinal(cardNumber.getBytes("UTF-8")));    
     ```

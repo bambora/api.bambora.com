@@ -1,0 +1,387 @@
+swagger: "2.0"
+info:
+  title: Payment API
+  description: This service contains data about the merchants
+  version: 0.1.0
+
+host: localhost:5001
+
+schemes:
+  - http
+
+basePath: /
+
+consumes:
+  - application/json
+
+produces:
+  - application/json
+  - application/problem+json
+
+paths:
+            
+  /payments/search:
+    get:
+      summary: Search payment data with a URL-encoded search string containing ands and comparitors
+      description: |
+        base64 encode the query params /search?q=amount>=100&currency=CAD
+      tags:
+        - payment
+      parameters:
+        - name: q
+          in: query
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Payment'
+            
+  /payments/cards:
+    post:
+      summary: Make credit card payment, automatic capture or pre-auth
+      tags:
+        - payment
+      responses:
+        '200':
+          description: Ok
+    get:
+      summary: find credit card payments
+      tags:
+        - payment
+      parameters:
+        - name: q
+          in: query
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/CardPayment'
+  
+  /payments/cards/{id}:
+    get:
+      summary: Get credit card payment
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          schema:
+            $ref: '#/definitions/CardPayment'
+    
+    delete:
+      summary: Cancel/void credit card payment
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          
+  /payments/cards/{id}/captures:
+    post:
+      summary: Capture credit card payment
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/Capture'
+      responses:
+        '200':
+          description: Ok
+    get:
+      summary: Get all captures on a card
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Capture'
+          
+  /payments/cards/{id}/captures/{capid}:
+    get:
+      summary: Get capture details
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+        - name: capid
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          schema:
+            $ref: '#/definitions/Capture'
+          
+    delete:
+      summary: Cancel a capture
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+        - name: capid
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          
+          
+  /payments/cards/{id}/refunds:
+    post:
+      summary: Refund credit card payment
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/Refund'
+      responses:
+        '200':
+          description: Ok
+    get:
+      summary: Get all refunds on a card payment
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+          
+  /payments/cards/{id}/refunds/{refid}:
+    delete:
+      summary: Cancel/void a refund
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+        - name: refid
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+    get:
+      summary: Get a refund
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+        - name: refid
+          in: path
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Ok
+    put:
+      summary: Update a refund. Just updates metadata.
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          type: string
+          required: true
+        - name: refid
+          in: path
+          type: string
+          required: true
+        - name: body
+          in: body
+          schema:
+            $ref: '#/definitions/Refund'
+      responses:
+        '200':
+          description: Ok
+          
+          
+  /payments/interac:
+    get:
+      summary: get all interac payments, or search them
+      tags:
+        - payment
+      parameters:
+        - name: q
+          in: query
+          type: string
+          required: false
+      responses:
+        '200':
+          description: Ok
+          schema: 
+            type: array
+            items:
+              $ref: '#/definitions/InteracPayment'
+    post:
+      summary: Make interac payment, first step
+      tags:
+        - payment
+      responses:
+        '200':
+          description: Ok
+          schema: 
+            $ref: '#/definitions/InteracPayment'
+            
+  /payments/interac/{id}:
+    get:
+      summary: get interac payment
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: IDEBIT_MERCHDATA
+      responses:
+        '200':
+          description: Ok
+          schema: 
+            $ref: '#/definitions/InteracPayment'
+            
+  /payments/interac/{id}/captures:
+    post:
+      summary: Capture interac payment, second step
+      tags:
+        - payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+          description: IDEBIT_MERCHDATA
+      responses:
+        '200':
+          description: Ok
+        '400':
+          description: bad
+          schema:
+            $ref: '#/definitions/Error'
+
+
+
+definitions:
+  Payment:
+    type: object
+    description: "Payment Data"
+    properties:
+      description:
+        type: string
+        description: "Description of payment"
+      id:
+        type: string
+
+  CardPayment:
+    type: object
+    description: "Credit card Payment Data"
+    properties:
+      amount:
+        type: number
+        format: integer
+      id:
+        type: string
+  
+  Refund:
+    type: object
+    description: "refund Data"
+    properties:
+      description:
+        type: string
+        description: "Description of refund"
+      id:
+        type: string
+
+  Capture:
+    type: object
+    description: "capture Data"
+    properties:
+      description:
+        type: string
+        description: "Description of capture"
+      id:
+        type: string
+        
+  InteracPayment:
+    type: object
+    description: "interac payment"
+    properties:
+      description:
+        type: string
+        description: "Description of interac"
+      id:
+        type: string
+      redirectUrl:
+        type: string
+        
+  Error:
+    type: object
+    description: "description"
+    properties:
+      status:
+        description: "HTTP error code"
+        type: integer
+      title:
+        description: "Title of problem, e.g. Bad Request"
+        type: string
+      detail:
+        description: "Detailed human readable error description"
+        type: string
+      type:
+        description: "Problem type, ref to URI"
+        type: string

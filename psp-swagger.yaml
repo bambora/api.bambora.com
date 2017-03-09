@@ -1,0 +1,416 @@
+swagger: '2.0'
+info:
+  description: >-
+    The API provides flexible integration interface for Payment Service
+    Provider's to Bambora's Acceptance.
+  version: 1.0.0
+  title: Bambora PSP API
+  contact:
+    name: Bambora
+    url: 'http://www.bambora.com'
+    email: support@bambora.com
+  license:
+    name: proprietary
+host: api.bambora.com
+basePath: /
+tags:
+  - name: psp-api-tx-resource
+    description: Psp Api Tx Resource
+produces:
+  - application/json
+paths:
+  /psp/tx:
+    post:
+      tags:
+        - psp-api-tx-resource
+      summary: handleRequest
+      operationId: handleRequestUsingPOST
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: txReq
+          description: txReq
+          required: true
+          schema:
+            $ref: '#/definitions/PspApiTxRequest'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PspApiTxResponse'
+definitions:
+  ClientSideEncCardData:
+    type: object
+    properties:
+      encryptedCardData:
+        type: array
+        description: >-
+          PlainCardData JSON object encrypted using the session key. Encryption
+          uses AES in CBC mode and PKCS#5/PKCS#7 padding with zero
+          initialisation vector.
+        items:
+          type: string
+          format: byte
+      fingerprint:
+        type: string
+        description: Fingerprint of certificate used for encrypting session key
+      sessionKey:
+        type: array
+        description: 'AES-256 session key encrypted with RSA public key using PKCS#1 padding'
+        items:
+          type: string
+          format: byte
+    description: Client side encrypted card data
+  MerchantData:
+    type: object
+    properties:
+      address:
+        type: string
+        description: >-
+          Merchant street address, retrieved from merchant configuration if
+          omitted. Mandatory for payment facilitator transactions.
+      city:
+        type: string
+        description: >-
+          Merchant city, retrieved from merchant configuration if omitted.
+          Mandatory for payment facilitator transactions.
+      country:
+        type: string
+        description: 'Merchant country, retrieved from merchant configuration if omitted'
+      independentSalesOrgId:
+        type: string
+        description: Independent sales organisation ID assigned by Bambora
+      merchantCategoryCode:
+        type: integer
+        format: int32
+        description: >-
+          Merchant category code (MCC), retrieved from merchant configuration if
+          omitted
+      merchantId:
+        type: string
+        description: Bambora merchant ID N(8)
+      name:
+        type: string
+        description: >-
+          Merchant name, retrieved from merchant configuration if omitted.
+          Mandatory for payment facilitator transactions in which case special
+          format has to be applied.
+      paymentFacilitatorId:
+        type: string
+        description: Payment facilitator ID assigned by Bambora
+      postalCode:
+        type: string
+        description: >-
+          Merchant postal code, retrieved from merchant configuration if
+          omitted. Mandatory for payment facilitator transactions.
+      subMerchantId:
+        type: string
+        description: >-
+          ID of sub-merchant assigned by PF/ISO. Used only together with PF ID
+          or ISO ID
+      terminalId:
+        type: string
+        description: 'Terminal ID ANS(8). Optional for eCommerce and other card not present '
+    description: Merchant information
+  AddressVerificationSystem:
+    type: object
+    properties:
+      cardholderAddress:
+        type: string
+        description: Cardholder street address
+      cardholderPostalCode:
+        type: string
+        description: 'Cardholder postal code, should be provided without spaces'
+    description: Address Verification System data
+  PlainCardData:
+    type: object
+    properties:
+      cardNumber:
+        type: string
+        description: 'Card number, can be omitted if track 2 is present'
+        pattern: '[0-9]{12,19}'
+      cvv2:
+        type: string
+        description: CVV2/CVC2/CVN2 code
+        pattern: '[0-9]{3,4}'
+      expiry:
+        type: string
+        description: 'Card expiry in format yyMM, can be omitted if track 2 is present'
+        pattern: '[0-9]{4}'
+      track2:
+        type: string
+        description: Track 2 data or track 2 equivalent data
+    description: Card data in plain text
+  DccData:
+    type: object
+    properties:
+      conversionRate:
+        type: string
+        description: Textual currency conversion rate for cardholder receipt
+      conversionRateDate:
+        type: string
+        description: Date of currency conversion
+      conversionRateSrc:
+        type: string
+        description: Name of conversion rate source for cardholder receipt
+      conversionRateTimestamp:
+        type: string
+        format: date-time
+        description: Timestamp of currency conversion
+      currency:
+        type: string
+        description: 'Alpha-numeric ISO 4217 currency code for DCC, e.g. EUR'
+      dccProvider:
+        type: string
+        description: Name of DCC provider for cardholder receipt
+      dccTemplate:
+        type: string
+        description: DCC template used in the conversion
+      isoAmount:
+        type: integer
+        format: int64
+        description: >-
+          DCC amount of transaction formatted according to card scheme
+          specifications. E.g. 100 for 1.00 EUR.
+      isoConversionRate:
+        type: integer
+        format: int32
+        description: Currency conversion rate formatted according to card scheme convention
+      markup:
+        type: string
+        description: Added DCC markup for cardholder receipt
+    description: >-
+      Dynamic Currency Conversion (DCC) rate data from DCC lookup response.
+      Mandatory for DCC transactions.
+  EcomReqData:
+    type: object
+    properties:
+      addressVerificationSystem:
+        $ref: '#/definitions/AddressVerificationSystem'
+      cardReadingMethod:
+        type: string
+        description: 'Card reading method used in the transaction, defaults to ECOM'
+        enum:
+          - ECOM
+          - MAIL
+          - TELEPHONE
+      cardholderVerificationMethod:
+        type: string
+        description: Cardholder verification method used in the transaction
+        enum:
+          - NONE
+          - CVV2
+          - THREEDS_ATTEMPT
+          - THREEDS
+          - THREEDS_MERCHANT_RISK
+          - THREEDS_ISSUER_RISK
+      threeDSecure:
+        $ref: '#/definitions/ThreeDSecure'
+    description: Request data for eCommerce and MOTO transactions
+  PspApiTxResponse:
+    type: object
+    required:
+      - merchant
+    properties:
+      approvalCode:
+        type: string
+        description: Authorization approval code if received from issuer.
+      ecomRespData:
+        $ref: '#/definitions/EcomRespData'
+      merchant:
+        $ref: '#/definitions/MerchantData'
+      operationId:
+        type: string
+        description: operationId echoed from request
+      responseCode:
+        type: string
+        description: >-
+          Textual response code, e.g. APPROVED, DENIED_NO_FUNDS or
+          ERROR_ISSUER_INOPERATIVE
+      responseCode2003:
+        type: integer
+        format: int32
+        description: 'Numeric response code according to ISO 8583:2003'
+      responseCodeCategory:
+        type: string
+        description: >-
+          Category of response code. PARTIALLY_APPROVED means that e.g. Address
+          Verification System or similar check was not successful. If client
+          does not wish to proceed with transaction, AUTH_REVERSAL must be sent.
+        enum:
+          - APPROVED
+          - PARTIALLY_APPROVED
+          - DECLINED
+      transactionId:
+        type: string
+        description: transactionId echoed from request
+    description: Card transaction response
+  ThreeDSecure:
+    type: object
+    properties:
+      aav:
+        type: string
+        description: MasterCard AAV in original base64 encoding
+      cavv:
+        type: string
+        description: Visa CAVV in either hexadecimal or base64 encoding
+      xid:
+        type: string
+        description: Visa XID in either hexadecimal or base64 encoding
+    description: >-
+      3D Secure data. Please note that if AAV or CAVV or equivalent is missing,
+      transaction should not be flagged as 3D Secure.
+  PspApiTxRequest:
+    type: object
+    required:
+      - merchant
+    properties:
+      accountType:
+        type: string
+        description: 'Cardholder account type, defaults to DEFAULT'
+        enum:
+          - DEFAULT
+          - SAVINGS
+          - CHEQUE
+          - CREDIT
+          - UNIVERSAL
+      amount:
+        $ref: '#/definitions/AmountData'
+      clientSideEncCardData:
+        $ref: '#/definitions/ClientSideEncCardData'
+      dccData:
+        $ref: '#/definitions/DccData'
+      ecomReqData:
+        $ref: '#/definitions/EcomReqData'
+      merchant:
+        $ref: '#/definitions/MerchantData'
+      merchantRef:
+        type: string
+        description: 'Merchant''s reference for transaction, must be N(1-15) if provided'
+      operationId:
+        type: string
+        description: >-
+          Unique id of specific operation in the transaction flow, e.g. AUTH or
+          CAPTURE
+      originalOperationId:
+        type: string
+        description: >-
+          ID of the operation referred to. For example, CAPTURE would refer to
+          operationId of AUTH.
+      plainCardData:
+        $ref: '#/definitions/PlainCardData'
+      recurringType:
+        type: string
+        description: 'Type of recurring transaction, defaults to NON_RECURRING'
+        enum:
+          - NON_RECURRING
+          - INITIAL_TX
+          - RECURRING_TX
+      remainingCaptures:
+        type: integer
+        format: int32
+        description: >-
+          If split capture is used, indicates count of remaining captures.
+          Defaults to 0.
+      retrievalRefNumber:
+        type: string
+        description: 'Retrieval reference number for transaction, must be N(12) if provided'
+      reversalReqData:
+        $ref: '#/definitions/ReversalReqData'
+      transactionId:
+        type: string
+        description: >-
+          Unique id of the transaction flow. For example AUTH, CAPTURE and
+          REFUND would have same transactionId.
+      transactionTimestamp:
+        type: string
+        format: date-time
+        description: >-
+          Timestamp of transaction in merchant time zone in format
+          yyyy-MM-ddTHH:mm:ss
+      transactionType:
+        type: string
+        description: 'Type of transaction, defaults to PURCHASE'
+        enum:
+          - PURCHASE
+          - CASH_ADVANCE
+          - PAYMENT
+      type:
+        type: string
+        description: Type of the request
+        enum:
+          - AUTH
+          - PREAUTH
+          - INCREMENTAL_AUTH
+          - AUTH_REVERSAL
+          - AUTH_REVERSAL_PARTIAL
+          - CAPTURE
+          - CAPTURE_REVERSAL
+          - CAPTURE_REFUND
+      walletType:
+        type: integer
+        format: int32
+        description: >-
+          Type of wallet, values are assigned by card schemes, e.g. 101 for
+          MasterPass in eCommerce and 102 for MasterPass NFC
+    description: Card transaction request
+  ReversalReqData:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: 'Reason for reversal, defaults to CUSTOMER_CANCELLATION'
+        enum:
+          - CUSTOMER_CANCELLATION
+          - SUSPECTED_MALFUNCTION
+          - INVALID_RESP
+          - TIMEOUT_WAITING_RESP
+    description: >-
+      Reversal request data. If not provided for reversal, reversal reason
+      defaults to CUSTOMER_CANCELLATION.
+  EcomRespData:
+    type: object
+    properties:
+      avsResult:
+        type: string
+        description: Result of Address Verification Result
+        enum:
+          - MATCH
+          - PARTIAL_MATCH
+          - MISMATCH
+          - ERROR
+      cvv2Result:
+        type: string
+        description: Result of CVV2/CVC2/CVN2 number check
+        enum:
+          - MATCH
+          - MISMATCH
+          - UNABLE_TO_VERIFY
+      threeDSResult:
+        type: string
+        description: Result of 3D Secure processing
+        enum:
+          - MATCH
+          - MISMATCH
+          - DATA_MISSING
+    description: eCommerce and MOTO response data. Present if relevant data is available.
+  AmountData:
+    type: object
+    properties:
+      currency:
+        type: string
+        description: 'Alpha-numeric ISO 4217 currency code for transaction, e.g. EUR'
+        pattern: '[A-Z]{3}'
+      isoAmount:
+        type: integer
+        format: int64
+        description: >-
+          Amount of transaction formatted according to card scheme
+          specifications. E.g. 100 for 1.00 EUR.
+    description: >-
+      Amount for the operation. Mandatory for AUTH, PREAUTH, INCREMENTAL_AUTH,
+      AUTH_REVERSAL_PARTIAL.  Conditional for CAPTURE and CAPTURE_REFUND if
+      amount differs from original operation.
